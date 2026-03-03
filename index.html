@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspector de Artefactos Arcanos - Skyrim Style</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    
+    <div class="main-container">
+        <header>
+            <h1>ANCIENT ARTEFACT INSPECTOR</h1>
+            <p class="subtitle">Utiliza el puntero para examinar el objeto.</p>
+        </header>
+        
+        <div class="canvas-wrapper">
+            <canvas id="artefactCanvas"></canvas>
+            <div id="interaction-ui" class="hidden">
+                <span class="rune-glyph">ᛒ</span>
+                <p>Runas Detectadas</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>Efectos Visuales Activos: Partículas | Proyección de Glifos</p>
+        </footer>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

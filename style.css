@@ -1,0 +1,93 @@
+/* Estilos Generales con Ambientación Skyrim */
+:root {
+    --bg-color: #050507; /* Casi negro */
+    --stone-dark: #1a1b20;
+    --magical-blue: #00d2ff;
+    --magical-glow: rgba(0, 210, 255, 0.4);
+    --text-main: #d1c8b3; /* Color hueso */
+    --font-family: 'Cinzel', serif; /* Tipografía tipo fantasía/medieval */
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: var(--bg-color);
+    background-image: 
+        radial-gradient(circle at center, rgba(30, 30, 40, 0.5) 0%, var(--bg-color) 70%),
+        url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36z8gAFWNhYfFvYmJiZGRkZPz/nwEA5fIK8bVfCQAAAABJRU5ErkJggg=='); /* Ruido sutil de piedra */
+    color: var(--text-main);
+    font-family: var(--font-family), 'Georgia', serif;
+    overflow: hidden;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 90%;
+    max-width: 1000px;
+}
+
+header, footer {
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(209, 200, 179, 0.5);
+}
+
+h1 { margin: 0; font-size: 1.8rem; }
+.subtitle { margin: 5px 0 0; font-size: 0.9rem; opacity: 0.8; }
+
+/* El Contenedor del Canvas */
+.canvas-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9; /* Mantiene la proporción */
+    border: 2px solid #3a3b40;
+    border-radius: 8px;
+    background-color: var(--stone-dark);
+    box-shadow: 
+        inset 0 0 50px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* UI Superpuesta Interactiva */
+#interaction-ui {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid #4a4b50;
+    padding: 10px 15px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    pointer-events: none; /* No interfiere con el mouse */
+}
+
+#interaction-ui.hidden {
+    opacity: 0;
+}
+
+.rune-glyph {
+    font-size: 2rem;
+    color: var(--magical-blue);
+    text-shadow: 0 0 10px var(--magical-glow);
+}
+
+footer p { font-size: 0.8rem; opacity: 0.6; }

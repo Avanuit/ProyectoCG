@@ -1,257 +1,190 @@
-// ==========================================
-// CONFIGURACIÓN PRINCIPAL
-// ==========================================
-const canvas = document.getElementById('artefactCanvas');
-const ctx = canvas.getContext('2d');
-const uiOverlay = document.getElementById('interaction-ui');
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-// Dimensiones dinámicas
-let width, height, centerX, centerY;
-function resize() {
-    width = canvas.width = canvas.parentElement.offsetWidth;
-    height = canvas.height = canvas.parentElement.offsetHeight;
-    centerX = width / 2;
-    centerY = height / 2;
-}
-window.addEventListener('resize', resize);
-resize();
+// Variables de estado del juego
+let mouseInCanvas = false;
+let win = false;
+let gameOver = false;
 
-// ==========================================
-// VARIABLES DE ESTADO E INTERACCIÓN
-// ==========================================
-let mouse = { x: centerX, y: centerY, active: false };
-let rotation = { x: 0, y: 0, z: 0 };
-let targetRotation = { x: 0, y: 0 };
-let particles = [];
-let projectedGlyphs = []; // Aquí guardaremos las runas flotantes
-
-// Escuchadores del Mouse
-canvas.addEventListener('mousemove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    mouse.x = e.clientX - rect.left;
-    mouse.y = e.clientY - rect.top;
-    mouse.active = true;
-
-    // Calculamos la rotación objetivo basada en la posición relativa al centro
-    targetRotation.x = (mouse.y - centerY) * 0.005; // Sensibilidad vertical
-    targetRotation.y = (mouse.x - centerX) * 0.005; // Sensibilidad horizontal
-});
-
-canvas.addEventListener('mouseleave', () => {
-    mouse.active = false;
-});
-
-// ==========================================
-// GEOMETRÍA BÁSICA: OCTAEDRO (Diamante 3D)
-// ==========================================
-const vertices = [
-    { x: 0, y: -1, z: 0 },  // 0: Top
-    { x: 1, y: 0, z: 0 },   // 1: Right
-    { x: 0, y: 0, z: 1 },   // 2: Front
-    { x: -1, y: 0, z: 0 },  // 3: Left
-    { x: 0, y: 0, z: -1 },  // 4: Back
-    { x: 0, y: 1, z: 0 }    // 5: Bottom
-];
-
-const faces = [
-    [0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1], // Pirámide superior
-    [5, 2, 1], [5, 3, 2], [5, 4, 3], [5, 1, 4]  // Pirámide inferior
-];
-
-// ==========================================
-// MATEMÁTICAS DE ROTACIÓN Y PROYECCIÓN
-// ==========================================
-function rotateX(point, angle) {
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    return {
-        x: point.x,
-        y: point.y * cos - point.z * sin,
-        z: point.y * sin + point.z * cos
-    };
-}
-
-function rotateY(point, angle) {
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    return {
-        x: point.x * cos + point.z * sin,
-        y: point.y,
-        z: -point.x * sin + point.z * cos
-    };
-}
-
-function project(point) {
-    const scale = 150; // Tamaño base del objeto
-    const perspective = 4; // Factor de profundidad
-    const zFactor = 1 / (perspective - point.z);
-    
-    return {
-        x: point.x * scale * zFactor + centerX,
-        y: point.y * scale * zFactor + centerY,
-        z: point.z // Mantenemos Z para ordenar las caras
-    };
-}
-
-// ==========================================
-// CLASES DE EFECTOS VISUALES
-// ==========================================
-
-// Partículas de polvo mágico que siguen al mouse
-class Particle {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.vx = (Math.random() - 0.5) * 2;
-        this.vy = (Math.random() - 0.5) * 2;
-        this.life = 100;
-        this.size = Math.random() * 3;
-    }
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.life -= 1.5;
-    }
+// 1. El Personaje (Pelota)
+const startPos = { x: 300, y: 720 };
+const ball = {
+    x: startPos.x,
+    y: startPos.y,
+    vx: 0,
+    vy: -14, // Salto
+    radius: 12,
+    color: "#2980b9",
     draw() {
-        ctx.fillStyle = `rgba(0, 210, 255, ${this.life / 100})`;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-    }
-}
-
-// Runas flotantes con distribución radial aleatoria
-class FloatingRune {
-    constructor(baseX, baseY) {
-        const glyphs = ['ᚱ', 'ᚦ', 'ᚨ', 'ᛒ', 'ᛗ', 'ᛟ', 'ᚲ', 'ᚢ', 'ᚺ', 'ᛈ'];
-        this.char = glyphs[Math.floor(Math.random() * glyphs.length)];
-        
-        // Esparcimiento natural: Elegimos un ángulo al azar (0 a 360 grados en radianes)
-        const angle = Math.random() * Math.PI * 2;
-        
-        // Definimos un radio mínimo (fuera del artefacto) y máximo
-        const minRadius = 160; 
-        const maxRadius = 300; 
-        const radius = minRadius + Math.random() * (maxRadius - minRadius);
-        
-        // Calculamos X e Y basados en el ángulo y el radio
-        this.x = baseX + Math.cos(angle) * radius;
-        this.y = baseY + Math.sin(angle) * radius;
-        
-        // Movimiento sutil de deriva
-        this.vx = (Math.random() - 0.5) * 0.4;
-        this.vy = (Math.random() - 0.5) * 0.4 - 0.2; 
-        
-        this.life = 0;
-        this.maxLife = 80 + Math.random() * 80;
-        this.opacity = 0;
-        this.scale = 0.6 + Math.random() * 0.8;
-    }
-
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.life++;
-
-        // Lógica de Fade-in y Fade-out
-        if (this.life < 30) {
-            this.opacity = this.life / 30; 
-        } else if (this.life > this.maxLife - 30) {
-            this.opacity = (this.maxLife - this.life) / 30; 
-        } else {
-            this.opacity = 1;
-        }
-    }
-
-    draw(ctx) {
-        if (this.life > this.maxLife) return;
-        
-        ctx.save();
-        ctx.font = `${24 * this.scale}px Cinzel, monospace`;
-        ctx.fillStyle = `rgba(0, 210, 255, ${this.opacity * 0.8})`;
-        ctx.shadowColor = 'rgba(0, 210, 255, 0.8)';
-        ctx.shadowBlur = 10;
-        ctx.fillText(this.char, this.x, this.y);
-        ctx.restore();
-    }
-}
-
-// ==========================================
-// BUCLE DE ANIMACIÓN PRINCIPAL
-// ==========================================
-function animate() {
-    requestAnimationFrame(animate);
-    
-    // Limpiar Canvas
-    ctx.clearRect(0, 0, width, height);
-    
-    // 1. Actualizar Rotación (suavizado)
-    rotation.x += (targetRotation.x - rotation.x) * 0.1;
-    rotation.y += (targetRotation.y - rotation.y) * 0.1;
-    rotation.z += 0.002; // Rotación automática lenta en el eje Z
-
-    // 2. Procesar Geometría (Rotar y Proyectar)
-    let projectedVertices = vertices.map(v => {
-        let p = v;
-        p = rotateX(p, rotation.x);
-        p = rotateY(p, rotation.y);
-        p = rotateY(p, rotation.z); 
-        return project(p);
-    });
-
-    // 3. Ordenar Caras por Profundidad (Painter's Algorithm)
-    let sortedFaces = faces.map((faceIdx, i) => {
-        const zDepth = (projectedVertices[faceIdx[0]].z + projectedVertices[faceIdx[1]].z + projectedVertices[faceIdx[2]].z) / 3;
-        return { indices: faceIdx, depth: zDepth, id: i };
-    });
-    sortedFaces.sort((a, b) => b.depth - a.depth); // Ordenar de atrás hacia adelante
-
-    // 4. Dibujar Caras del Artefacto
-    sortedFaces.forEach(faceData => {
-        const points = faceData.indices.map(idx => projectedVertices[idx]);
-        
-        // Estilo del cristal
-        ctx.fillStyle = `rgba(40, 42, 50, 0.9)`;
-        ctx.strokeStyle = `rgba(100, 105, 120, 0.5)`; // Malla de alambre
-        
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        ctx.lineTo(points[1].x, points[1].y);
-        ctx.lineTo(points[2].x, points[2].y);
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, true);
         ctx.closePath();
-        
+        ctx.fillStyle = this.color;
         ctx.fill();
-        ctx.stroke();
-    });
-
-    // 5. Interacción General y Generación de Runas
-    if (mouse.active) {
-        // Partículas en el mouse
-        if (Math.random() < 0.3) particles.push(new Particle(mouse.x, mouse.y));
-        uiOverlay.classList.remove('hidden');
-        
-        // Generar runas flotantes alrededor del objeto
-        if (Math.random() < 0.08) {
-            projectedGlyphs.push(new FloatingRune(centerX, centerY));
-        }
-    } else {
-        uiOverlay.classList.add('hidden');
     }
+};
 
-    // 6. Dibujar y actualizar Partículas
-    particles.forEach((p, i) => {
-        p.update();
-        p.draw();
-        if (p.life <= 0) particles.splice(i, 1);
-    });
+// 2. Plataformas (Ahora tienen velocidad 'vx' para moverse)
+const platforms = [
+    { x: 0, y: 780, w: 600, h: 20, vx: 0 },   // Suelo base estático
+    { x: 50, y: 640, w: 120, h: 15, vx: 2 },  // Se mueve a la derecha
+    { x: 400, y: 500, w: 120, h: 15, vx: -2.5 }, // Se mueve a la izquierda
+    { x: 100, y: 360, w: 120, h: 15, vx: 3 },
+    { x: 300, y: 220, w: 100, h: 15, vx: -1.5 },
+    { x: 200, y: 100, w: 80,  h: 15, vx: 3.5 }
+];
 
-    // 7. Dibujar y actualizar Runas Flotantes
-    projectedGlyphs.forEach((g, i) => {
-        g.update();
-        g.draw(ctx);
-        if (g.life >= g.maxLife) projectedGlyphs.splice(i, 1);
-    });
+// 3. Obstáculos Verticales (Rojos, debes evadirlos)
+const obstacles = [
+    { x: 280, y: 560, w: 20, h: 100 }, // Barrera central
+    { x: 150, y: 400, w: 15, h: 120 }, // Barrera izquierda
+    { x: 450, y: 280, w: 20, h: 90 },  // Barrera derecha
+];
+
+const goal = { x: 250, y: 20, w: 100, h: 30, color: "gold" };
+
+// Función para reiniciar
+function resetGame() {
+    ball.x = startPos.x;
+    ball.y = startPos.y;
+    ball.vx = 0;
+    ball.vy = -14;
+    gameOver = false;
+    win = false;
 }
 
-// Iniciar la animación
-animate();
+// 4. El Bucle Principal
+function draw() {
+    // A. EL MUNDO SIEMPRE SE MUEVE (Incluso sin mouse)
+    // Actualizar movimiento de plataformas
+    platforms.forEach(p => {
+        p.x += p.vx;
+        // Rebotar contra las paredes
+        if (p.x + p.w > canvas.width || p.x < 0) {
+            p.vx *= -1; 
+        }
+    });
+
+    // Limpiar canvas con efecto rastro
+    ctx.fillStyle = "rgb(255 255 255 / 40%)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Dibujar Meta
+    ctx.fillStyle = goal.color;
+    ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
+
+    // Dibujar Plataformas
+    ctx.fillStyle = "#333";
+    platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+
+    // Dibujar Obstáculos mortales
+    ctx.fillStyle = "#e74c3c"; // Color rojo peligro
+    obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
+
+    // Dibujar Pelota
+    ball.draw();
+
+    // B. EL PERSONAJE SOLO SE MUEVE SI EL MOUSE ESTÁ DENTRO
+    if (mouseInCanvas && !win && !gameOver) {
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+        ball.vy += 0.4; // Gravedad
+
+        // Rebote en paredes laterales
+        if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
+            ball.vx = -ball.vx;
+        }
+
+        // Caerse por debajo del mapa = Game Over
+        if (ball.y - ball.radius > canvas.height) {
+            gameOver = true;
+        }
+
+        // Colisión con Plataformas (Rebote)
+        platforms.forEach(p => {
+            if (ball.vy > 0 && 
+                ball.x > p.x && ball.x < p.x + p.w &&
+                ball.y + ball.radius >= p.y &&
+                ball.y + ball.radius <= p.y + ball.vy + 2) {
+                
+                ball.y = p.y - ball.radius; 
+                ball.vy = -12; // Fuerza del rebote
+            }
+        });
+
+        // Colisión con Obstáculos Rojos (Game Over)
+        obstacles.forEach(o => {
+            // Algoritmo matemático para colisión entre Círculo y Rectángulo
+            let testX = ball.x;
+            let testY = ball.y;
+
+            if (ball.x < o.x) testX = o.x;               // Borde izquierdo
+            else if (ball.x > o.x + o.w) testX = o.x + o.w; // Borde derecho
+            if (ball.y < o.y) testY = o.y;               // Borde superior
+            else if (ball.y > o.y + o.h) testY = o.y + o.h; // Borde inferior
+
+            let distX = ball.x - testX;
+            let distY = ball.y - testY;
+            let distance = Math.sqrt((distX*distX) + (distY*distY));
+
+            if (distance <= ball.radius) {
+                gameOver = true; // Tocaste la lava roja
+            }
+        });
+
+        // Colisión con la Meta (Victoria)
+        if (ball.x > goal.x && ball.x < goal.x + goal.w &&
+            ball.y > goal.y && ball.y < goal.y + goal.h) {
+            win = true;
+        }
+    }
+
+    // C. PANTALLAS DE FIN DE JUEGO
+    if (win) {
+        ctx.fillStyle = "rgba(0,0,0,0.8)";
+        ctx.fillRect(0,0,canvas.width, canvas.height);
+        ctx.fillStyle = "gold";
+        ctx.font = "40px sans-serif";
+        ctx.fillText("¡VICTORIA!", 190, canvas.height / 2);
+    } else if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.8)";
+        ctx.fillRect(0,0,canvas.width, canvas.height);
+        ctx.fillStyle = "#e74c3c";
+        ctx.font = "40px sans-serif";
+        ctx.fillText("¡CHOCASTE!", 180, canvas.height / 2 - 20);
+        
+        ctx.fillStyle = "white";
+        ctx.font = "20px sans-serif";
+        ctx.fillText("Haz clic para reiniciar", 200, canvas.height / 2 + 30);
+    }
+
+    // El ciclo del mundo jamás se detiene
+    requestAnimationFrame(draw);
+}
+
+// 5. Controles (Interacción con el Mouse)
+
+canvas.addEventListener("mousemove", (e) => {
+    if (!mouseInCanvas || win || gameOver) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    ball.vx = (mouseX - ball.x) * 0.05; // Dirigir la bola hacia el cursor
+});
+
+canvas.addEventListener("mouseenter", () => {
+    mouseInCanvas = true;
+});
+
+canvas.addEventListener("mouseleave", () => {
+    mouseInCanvas = false;
+});
+
+// Reiniciar al hacer clic si perdiste
+canvas.addEventListener("click", () => {
+    if (gameOver || win) {
+        resetGame();
+    }
+});
+
+// Arrancar el ciclo
+requestAnimationFrame(draw);

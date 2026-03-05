@@ -1,2 +1,1 @@
-la idea de este proyecto va a ser el modelo en 3d de un vagon de metro, el cual reaccione al movimiento del mouse y aparezcan diseños por encima
-
+la idea de este proyecto es un juego estilo doodle jump, el cual es generado aleatoriamente, el objetivo es llegar a 1000 puntos y alcanzar el bloque dorado

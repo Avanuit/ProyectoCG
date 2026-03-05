@@ -34,7 +34,7 @@ let goal = null;
 function createStep() {
     if (win || goal) return;
     while (nextPlatformY > cameraY - 100) {
-        if (score >= 1000) {
+        if (score >= 500) {
             goal = { x: 200, y: nextPlatformY, w: 200, h: 40, color: "gold" };
             break;
         }
@@ -133,7 +133,7 @@ function draw() {
     // UI y Pantallas
     ctx.fillStyle = "#2c3e50";
     ctx.font = "bold 20px Arial";
-    ctx.fillText(`Puntos: ${score} / 1000`, 20, 40);
+    ctx.fillText(`Puntos: ${score}`, 20, 40);
 
     if (!isLocked && !gameOver && !win) {
         ctx.fillStyle = "rgba(0,0,0,0.5)";

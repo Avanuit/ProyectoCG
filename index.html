@@ -3,13 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Juego de Rebotes y Obstáculos</title>
+    <title>Cyber Sigil Jumper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Megrim&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="game-container">
+        <canvas id="canvas" width="800" height="900"></canvas>
+        
+        <div id="ui-layer">
+            <div id="score-display">SCORE: <span id="score">0</span></div>
+            
+            <div id="stamina-container">
+                <div id="stamina-bar"></div>
+            </div>
 
-    <h2>Llega al bloque dorado</h2>
-    <canvas id="canvas" width="600" height="800"></canvas>
+            <div id="message-overlay" class="visible">
+                <h2 id="main-message">INICIAR SISTEMA</h2>
+                <p id="sub-message">Sobrevive al ascenso.</p>
+                <p style="font-size: 0.9rem; margin-top: 20px;">[ Haz Clic ]</p>
+            </div>
+        </div>
+    </div>
 
     <script src="main.js"></script>
 </body>
